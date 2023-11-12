@@ -1,31 +1,28 @@
 #ifndef _LOG_UNIX_ESCAPE_SEQ_HPP_
 #define _LOG_UNIX_ESCAPE_SEQ_HPP_
 
-#include "colorscheme.hpp"
+bool CheckTermSupport256();
 
-class StandartScheme : public ColorSchemeBase {
-    public:
-        StandartScheme();
-        bool StringEscaped(std::string &, const std::string &) override;
-};
+const char* GetColorDefault();
+const char* GetColorRed();
+const char* GetColorYellow();
+const char* GetColorGreen();
+const char* GetColorPurple();
 
-class MultiScheme : public ColorSchemeBase {
-    public:
-        MultiScheme();
-        bool StringEscaped(std::string &, const std::string &) override;
-};
+const char* GetColorDarkRed();
+const char* GetColorDarkYellow();
+const char* GetColorDarkGreen();
+const char* GetColorDarkPurple();
 
-class PartialScheme : public ColorSchemeBase {
-    public:
-        PartialScheme();
-        bool StringEscaped(std::string &, const std::string &) override;
-};
+#define STANDART GetColorDefault()
+#define RED      GetColorRed()
+#define YELLOW   GetColorYellow()
+#define GREEN    GetColorGreen()
+#define PURPLE   GetColorPurple()
 
-class UserScheme : public ColorSchemeBase {
-    public:
-        UserScheme();
-        bool StringEscaped(std::string &, const std::string &) override;
-};
-
+#define DARK_RED     GetColorDarkRed()
+#define DARK_YELLOW  GetColorDarkYellow()
+#define DARK_GREEN   GetColorDarkGreen()
+#define DARK_PURPLE  GetColorDarkPurple()
 
 #endif  // _LOG_UNIX_ESCAPE_SEQ_HPP_

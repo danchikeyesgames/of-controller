@@ -1,7 +1,7 @@
 #ifndef _LOG_LOGGER_HPP_
 #define _LOG_LOGGER_HPP_
 
-#include "unixEscapeSeq.hpp"
+#include "colorscheme.hpp"
 
 enum eLogLevel {
     eDebug = 0,
@@ -14,11 +14,12 @@ enum eLogLevel {
 class Log {
     private:
         eLogLevel  m_logLevel;
-        eColorMode m_colorMode;
+        ColorSchemeBase* m_colorScheme;
     protected:
-        Log();
+        Log(eLogLevel);
     public:
-        static Log* Instance();
+        static Log& Instance();
+        bool SetColorScheme(eColorMode _colorMode);
 };
 
 
