@@ -1,61 +1,71 @@
-#ifndef _LOG_COLORSCHEME_HPP_
-#define _LOG_COLORSCHEME_HPP_
+#ifndef _COLORSCHEME_HPP_
+#define _COLORSCHEME_HPP_
 
-#include <string>
+#include <cstddef>
+#include <cstdint>
+
 #include <map>
+#include <string>
 
-
-#define COLOR_MAX_SYM 20
-
-struct ColorTerm {
-    char color[COLOR_MAX_SYM];
-};
-
-enum eColorMode {
+enum class eColorMode {
     eStandartMode = 0,
     eMultiMode,
-    ePartialMode,       // three color (red, green and standart)
     eUserMode,
     eMaxColorMode
 };
 
+enum class eLogColor {
+    eDebugColor = 0,
+    eInfoColor,
+    eWarningColor,
+    eErrorColor,
+    eFailColor
+};
+
+struct TermColor {
+    char color[cMaxEscapedStr];
+
+    TermColor(const char* _colorStr);
+};
+
 class ColorSchemeBase {
-    private:
-        eColorMode m_colorMode;
+    eColorMode m_colorMode;
+
     protected:
-        std::map<std::string, ColorTerm> m_colorMap;
+
+    std::map<eLogColor, TermColor> m_loggerColorScheme;
+    
     public:
-        ColorSchemeBase(eColorMode _colorMode);
-        bool RegisterColorScheme();
-        const eColorMode& GetColorMode();
-        virtual bool StringEscaped(std::string &, const std::string &);
+
+    ColorSchemeBase(eColorMode);
+    bool RegisterColorScheme();
+    std::string ColoredText(const std::string& _text, eLogColor _logColor);
 };
 
-bool InitialColorScheme();
-ColorSchemeBase* GetColorScheme(eColorMode _colorMode);
+class StandartColorScheme : public ColorSchemeBase {
 
-class StandartScheme : public ColorSchemeBase {
     public:
-        StandartScheme();
-        bool StringEscaped(std::string &, const std::string &) override;
+
+    StandartColorScheme(eColorMode);
 };
 
-class MultiScheme : public ColorSchemeBase {
+class MultiColorScheme : public ColorSchemeBase {
+
     public:
-        MultiScheme();
-        bool StringEscaped(std::string &, const std::string &) override;
+
+    MultiColorScheme(eColorMode);
 };
 
-class PartialScheme : public ColorSchemeBase {
+class UserColorScheme : public ColorSchemeBase {
+
     public:
-        PartialScheme();
-        bool StringEscaped(std::string &, const std::string &) override;
+
+    UserColorScheme(eColorMode);
 };
 
-class UserScheme : public ColorSchemeBase {
-    public:
-        UserScheme();
-        bool StringEscaped(std::string &, const std::string &) override;
-};
+bool InitialColorSchemes();
+const ColorSchemeBase* GetColorScheme(eColorMode _colorMode);
 
-#endif  // _LOG_COLORSCHEME_HPP_
+
+
+#endif  // _COLORSCHEME_HPP_
