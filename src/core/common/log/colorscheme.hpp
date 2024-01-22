@@ -7,6 +7,8 @@
 #include <map>
 #include <string>
 
+#define cMaxEscapedStr 30
+
 enum class eColorMode {
     eStandartMode = 0,
     eMultiMode,
@@ -26,6 +28,7 @@ struct TermColor {
     char color[cMaxEscapedStr];
 
     TermColor(const char* _colorStr);
+    TermColor();
 };
 
 class ColorSchemeBase {
@@ -47,6 +50,8 @@ class StandartColorScheme : public ColorSchemeBase {
     public:
 
     StandartColorScheme(eColorMode);
+    
+    static StandartColorScheme* CreateStandartColorScheme();
 };
 
 class MultiColorScheme : public ColorSchemeBase {
@@ -54,6 +59,8 @@ class MultiColorScheme : public ColorSchemeBase {
     public:
 
     MultiColorScheme(eColorMode);
+
+    static MultiColorScheme* CreateMultiColorScheme();
 };
 
 class UserColorScheme : public ColorSchemeBase {
@@ -61,6 +68,8 @@ class UserColorScheme : public ColorSchemeBase {
     public:
 
     UserColorScheme(eColorMode);
+
+    static UserColorScheme* CreateUserColorScheme();
 };
 
 bool InitialColorSchemes();

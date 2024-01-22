@@ -1,25 +1,28 @@
 #include "colorscheme.hpp"
 
-#include "unix_escaped_seq.hpp"
+#include "linux/unix_escaped_seq.hpp"
 
 #include <cstdio>
 #include <cstring>
-
-const uint16_t cMaxEscapedStr = 30;
 
 static const ColorSchemeBase* sc_colorModes[(size_t) eColorMode::eMaxColorMode] = {nullptr};
 
 bool InitialColorSchemes()
 {
+    if (CheckTermSupport256())
+    {
+        std::printf("Terminal supported 256color\n");
+    }
+
     StandartColorScheme* standartColor = nullptr;
     MultiColorScheme* multiColor = nullptr;
     UserColorScheme* userColor = nullptr;
 
     try
     {
-        standartColor   = new StandartColorScheme(eColorMode::eStandartMode);
-        multiColor      = new MultiColorScheme(eColorMode::eMultiMode);
-        userColor       = new UserColorScheme(eColorMode::eUserMode);
+        standartColor   = StandartColorScheme::CreateStandartColorScheme();
+        multiColor      = MultiColorScheme::CreateMultiColorScheme();
+        userColor       = UserColorScheme::CreateUserColorScheme();
     }
     catch(std::bad_alloc& bad)
     {
@@ -29,7 +32,7 @@ bool InitialColorSchemes()
 
     if (standartColor->RegisterColorScheme() && multiColor->RegisterColorScheme() && userColor->RegisterColorScheme())
     {
-        printf("Color schemes registered succssesfully\n");
+        printf("Colorschemes registered succsessfully\n");
         return true;
     }
 
@@ -37,15 +40,19 @@ bool InitialColorSchemes()
     return false;
 }
 
-TermColor::TermColor(const char* _colorStr)
-{
-    std::memcpy(color, _colorStr, cMaxEscapedStr);
-}
 
 const ColorSchemeBase* GetColorScheme(eColorMode _colorMode)
 {
     return sc_colorModes[(size_t) _colorMode];
 }
+
+TermColor::TermColor(const char* _colorStr)
+{
+    std::memcpy(color, _colorStr, cMaxEscapedStr);
+}
+
+TermColor::TermColor()
+{}
 
 ColorSchemeBase::ColorSchemeBase(eColorMode _colorMode) : m_colorMode(_colorMode)
 {}
@@ -81,6 +88,11 @@ StandartColorScheme::StandartColorScheme(eColorMode _colorMode) : ColorSchemeBas
     m_loggerColorScheme[eLogColor::eFailColor]      = TermColor(RED);
 }
 
+StandartColorScheme* StandartColorScheme::CreateStandartColorScheme()
+{
+    return new StandartColorScheme(eColorMode::eStandartMode);
+}
+
 MultiColorScheme::MultiColorScheme(eColorMode _colorMode) : ColorSchemeBase(_colorMode)
 {
     m_loggerColorScheme[eLogColor::eDebugColor]     = TermColor(DARK_GREEN);
@@ -90,6 +102,11 @@ MultiColorScheme::MultiColorScheme(eColorMode _colorMode) : ColorSchemeBase(_col
     m_loggerColorScheme[eLogColor::eFailColor]      = TermColor(YELLOW);
 }
 
+MultiColorScheme* MultiColorScheme::CreateMultiColorScheme()
+{
+    return new MultiColorScheme(eColorMode::eMultiMode);
+}
+
 UserColorScheme::UserColorScheme(eColorMode _colorMode) : ColorSchemeBase(_colorMode)
 {
     m_loggerColorScheme[eLogColor::eDebugColor]     = TermColor(DARK_GREEN);
@@ -97,4 +114,9 @@ UserColorScheme::UserColorScheme(eColorMode _colorMode) : ColorSchemeBase(_color
     m_loggerColorScheme[eLogColor::eWarningColor]   = TermColor(PURPLE);
     m_loggerColorScheme[eLogColor::eErrorColor]     = TermColor(DARK_RED);
     m_loggerColorScheme[eLogColor::eFailColor]      = TermColor(YELLOW);
+}
+
+UserColorScheme* UserColorScheme::CreateUserColorScheme()
+{
+    return new UserColorScheme(eColorMode::eUserMode);
 }

@@ -1,6 +1,8 @@
 #ifndef _LOGGER_HPP_
 #define _LOGGER_HPP_
 
+#include "colorscheme.hpp"
+
 #include <new>
 #include <string>
 
@@ -23,7 +25,7 @@ class Log {
 
     protected:
 
-    Log::Log();
+    Log();
 
     private:
 
@@ -36,7 +38,7 @@ class Log {
     static Log& Instance() noexcept;
     
     bool Initialize(eLogLevel _logLevel, eColorMode _colorMode) noexcept;
-    bool Print(eLogLevel _logLevel, char* _format, ...) noexcept;
+    bool Print(eLogLevel _logLevel, const char* _format, ...) noexcept;
 };
 
 

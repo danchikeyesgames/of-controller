@@ -39,7 +39,8 @@ static const char* const cDarkColorPurple256 = "\033[01;38;05;53m";
 
 bool CheckTermSupport256()
 {
-    return std::strstr(cTERMENV, c256Color);
+    isTerm256Supported = std::strstr(cTERMENV, c256Color) == NULL ? false : true;
+    return isTerm256Supported;
 }
 
 const char* GetColorDefault() {

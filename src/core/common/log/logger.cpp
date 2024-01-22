@@ -1,24 +1,26 @@
 #include "logger.hpp"
 
-#include "colorscheme.hpp"
-
 #include <cstdio>
+#include <cstring>
 #include <cstdlib>
 #include <cstdarg>
 
 const uint16_t cMaxPrintSymbols = 120;
+const char* cPrintedOutputStyle = "%-10s : %s";
+const size_t cLengthPrintedOutputStyle = 13;
+constexpr size_t cLengthInforamtionMessage = cMaxPrintSymbols - cLengthPrintedOutputStyle;
 
 Log* Log::m_instance = nullptr;
 
 Log::Log()
 {}
 
-bool Log::InstanceExist()
+bool Log::InstanceExist() noexcept
 {
     return m_instance ? true : false;
 }
 
-void Log::NewAllocateMemory()
+void Log::NewAllocateMemory() noexcept
 {
     try
     {
@@ -31,12 +33,12 @@ void Log::NewAllocateMemory()
     }
 }
 
-Log* Log::CreateLog()
+Log* Log::CreateLog() throw()
 {
     return new Log();
 }
 
-Log& Log::Instance()
+Log& Log::Instance() noexcept
 {
     if (!InstanceExist())
     {
@@ -46,8 +48,10 @@ Log& Log::Instance()
     return *m_instance;
 }
 
-bool Log::Initialize(eLogLevel _logLevel, eColorMode _colorMode)
+bool Log::Initialize(eLogLevel _logLevel, eColorMode _colorMode) noexcept
 {
+    std::printf("Logger init\n");
+
     if (!InitialColorSchemes())
     {
         return false;
@@ -68,24 +72,25 @@ bool Log::Initialize(eLogLevel _logLevel, eColorMode _colorMode)
     m_logLevelColorMap[eLogLevel::eError] = eLogColor::eErrorColor;
     m_logLevelColorMap[eLogLevel::eFail] = eLogColor::eFailColor;
 
+    std::printf("Logger init succsessfully\n");
     return true;
 }
 
-bool Log::Print(eLogLevel _logLevel, char* _format, ...)
+bool Log::Print(eLogLevel _logLevel, const char* _format, ...) noexcept
 {
     if (_logLevel < m_logLevel)
         return true;
 
     char printBuffer[cMaxPrintSymbols] = {'\0'};
-    char printFormat[cMaxPrintSymbols] = {'\0'};
+    char printFormat[cLengthInforamtionMessage] = {'\0'};
 
     va_list vaList;
     va_start(vaList, _format);
-    std::vsnprintf((char *) &printFormat, cMaxPrintSymbols, _format, vaList);
+    std::vsnprintf((char *) &printFormat, cLengthInforamtionMessage, _format, vaList);
     va_end(vaList);
 
     std::string logLevelStr = m_logLevelHeaderMap[_logLevel];
-    std::snprintf((char *) &printBuffer, cMaxPrintSymbols, "%10s : %s", logLevelStr.c_str(), printFormat);
+    std::snprintf((char *) &printBuffer, cMaxPrintSymbols, cPrintedOutputStyle, logLevelStr.c_str(), printFormat);
 
     eLogColor logColor = m_logLevelColorMap[_logLevel];
     std::string text = printBuffer;
