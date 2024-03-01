@@ -3,8 +3,11 @@
 
 #include "ModuleBase.hpp"
 
+#include "common/DLL/LibConnection.hpp"
+
 #include <unordered_map>
 #include <string>
+#include <thread>
 
 // TODO:
 // wrap modules to namespace
@@ -12,7 +15,6 @@
 enum class ModuleState {
     REGISTERED,
     INITIALIZE,
-    START,
     RUN,
     SHUTDOWN,
     UNKNOWN
@@ -34,10 +36,16 @@ struct ModuleInfo {
 
     ModuleInfo();
     ModuleInfo(ModuleBase* _module);
+
+    void Init();
+    void Run();
 };
 
 class LoadManager {
-    std::unordered_map<std::string, ModuleInfo> m_modules; 
+    std::unordered_map<std::string, ModuleInfo> m_modules;
+    std::map<std::string, std::thread*> m_threads;
+
+    LibConnection m_dlibs;
 
     LoaderState m_state;
 
