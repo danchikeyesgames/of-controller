@@ -4,7 +4,6 @@
 #include "api/Module.hpp"
 
 class Controller : ModuleBase {
-    std::string m_name = "controller";
 public:
     void Init() override;
     void Start() override;

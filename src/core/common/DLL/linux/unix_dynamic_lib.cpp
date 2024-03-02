@@ -12,11 +12,12 @@ void* CreateDynamicLibrary(std::string _name) {
 
     if (dlerror() != NULL) {
         Log::Instance().Print(eLogLevel::eWarning, "failed load '%s' library", pathOfLib.c_str());
+        lib_ptr = nullptr;
     }
 
     return lib_ptr;
 }
 
 void DestroyDynamicLibrary(void* _lib) {
-    dlclose(_lib);
+    if (_lib != nullptr) dlclose(_lib);
 }

@@ -2,7 +2,7 @@
 
 .PHONY: all libdll liblogger core clean
 
-all: libdll liblogger core
+all: liblogger core
 
 
 libdll:
@@ -15,6 +15,5 @@ core:
 	make -C core/ .build -j4
 
 clean:
-	make -C core/common/DLL/ clean
 	make -C core/common/log clean
 	make -C core/ clean

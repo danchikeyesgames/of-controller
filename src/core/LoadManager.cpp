@@ -9,6 +9,8 @@ ModuleInfo::ModuleInfo() : m_module(nullptr), m_state(ModuleState::UNKNOWN) {}
 ModuleInfo::ModuleInfo(ModuleBase* _module) : m_module(_module), m_state(ModuleState::REGISTERED) {}
 
 void ModuleInfo::Init() {
+    Log::Instance().Print(eLogLevel::eDebug, "deb");
+    Log::Instance().Print(eLogLevel::eDebug, "%0#x", m_module);
     m_module->Init();
     m_state = ModuleState::INITIALIZE;
 }
@@ -32,15 +34,18 @@ void LoadManager::InitServices() {
 
     auto moduleIter = ModuleRegistry::GetBeginIter();
     auto endIter    = ModuleRegistry::GetEndIter();
-    
+
     for (; moduleIter != endIter; ++moduleIter) {
         if (m_modules.find(moduleIter->first) != m_modules.end()) {
             Log::Instance().Print(eLogLevel::eWarning, "module '%s' has yet registered", moduleIter->first.c_str());
             continue;
         }
 
+        Log::Instance().Print(eLogLevel::eDebug, "start");
         ModuleInfo moduleInfo(moduleIter->second);
+        Log::Instance().Print(eLogLevel::eDebug, "1 %s", moduleIter->first.c_str());
         moduleInfo.Init();
+        Log::Instance().Print(eLogLevel::eDebug, "2");
         Log::Instance().Print(eLogLevel::eInfo, "init module '%s'", moduleIter->first.c_str());
         m_modules[moduleIter->first] = moduleInfo;
     }
@@ -71,5 +76,5 @@ void LoadManager::StartWork() {
     }
 
     m_state = LoaderState::RUNNING;
-    Log::Instance().Print(eLogLevel::eInfo, "LoadManager change state to RUNNIG");
+    Log::Instance().Print(eLogLevel::eInfo, "LoadManager change state to RUNNING");
 }

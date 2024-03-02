@@ -2,9 +2,12 @@
 
 #include "common/log/logger.hpp"
 
-Controller::Controller() : ModuleBase(m_name) {}
+Controller::Controller() : ModuleBase("controller") {
+    Log::Instance().Print(eLogLevel::eInfo, "Constructor");
+}
 
 void Controller::Init() {
+    printf("hello mans\n");
     Log::Instance().Print(eLogLevel::eInfo, "Module Controller Init");
 }
 
@@ -16,4 +19,4 @@ void Controller::Shutdown() {
     Log::Instance().Print(eLogLevel::eInfo, "Module Controller ShutDown");
 }
 
-static Controller instance;
+static volatile Controller instance;

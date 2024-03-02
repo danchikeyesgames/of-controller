@@ -11,6 +11,9 @@ class DynamicLibrary {
 public:
     DynamicLibrary(std::string _name);
     ~DynamicLibrary();
+
+    bool IsOpenned();
+    void DestroyLib();
 };
 
 
