@@ -23,12 +23,10 @@ class Log {
 
     static Log* m_instance;
 
-    protected:
-
+protected:
     Log();
 
-    private:
-
+private:
     static bool InstanceExist() noexcept;
     static void NewAllocateMemory() noexcept;
     static Log* CreateLog() throw();

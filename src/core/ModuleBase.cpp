@@ -1,5 +1,7 @@
 #include "ModuleBase.hpp"
 
+std::map<std::string, ModuleBase*> ModuleRegistry::s_registeredModules;
+
 ModuleBase::ModuleBase(std::string _name) {
     ModuleRegistry::RegisterModule(_name, this);
 }

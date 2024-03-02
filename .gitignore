@@ -1,1 +1,7 @@
 .vscode
+
+# ignore dynamic lib
+*.so
+
+#ignore object-files
+*.o
