@@ -1,11 +1,16 @@
 SOURCES=DynamicLibrary.cpp LibConnection.cpp linux/unix_dynamic_lib.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
-CXX=g++
-CXXFLAGS=-fPIC -c
-LDFLAGS=-shared -o
-INCLUDE=-I../../
+
+CXX ?= g++
+CXXFLAGS ?= -c
+INCLUDE ?= -I.
+
 DLIBS_INCLUDE=-L../log
 DLIBS=-ldl -llogger
+
+DLIBFLAGS=-fPIC $(INCLUDE) $(CXXFLAGS)
+LDFLAGS=-shared -o
+LD_DLIBS= $(DLIBS_INCLUDE) $(DLIBS)
 
 LIBNAME=libdll.so
 
@@ -14,16 +19,16 @@ LIBNAME=libdll.so
 .build: $(LIBNAME)
 
 $(LIBNAME): $(OBJECTS)
-	$(CXX) $(LDFLAGS) $@ $^ $(DLIBS_INCLUDE) $(DLIBS)
+	$(CXX) $(LDFLAGS) $@ $^ $(LD_DLIBS)
 
 DynamicLibrary.o: DynamicLibrary.cpp
-	$(CXX) $(CXXFLAGS) $(INCLUDE) $^
+	$(CXX) $(DLIBFLAGS) $^
 
 LibConnection.o: LibConnection.cpp
-	$(CXX) $(CXXFLAGS) $(INCLUDE) $^
+	$(CXX) $(DLIBFLAGS) $^
 
 linux/unix_dynamic_lib.o: linux/unix_dynamic_lib.cpp
-	$(CXX) $(CXXFLAGS) $(INCLUDE) $^ -o $@
+	$(CXX) $(DLIBFLAGS) $^ -o $@
 
 clean:
 	rm $(OBJECTS) $(LIBNAME)

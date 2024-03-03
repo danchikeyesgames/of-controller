@@ -1,11 +1,17 @@
 SOURCES=Controller.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
-CXX=g++
-CXXFLAGS=-fPIC -c
-LDFLAGS=-rdynamic -shared -o
-INCLUDE=-I../../core
+
+CXX ?= g++
+CXXFLAGS ?= -c
+INCLUDE ?= -I../../core/
+
+DLIBFLAGS=-fPIC $(INCLUDE) $(CXXFLAGS)
+
 DLIBS_INCLUDE=-L../../core/common/log
 DLIBS=-llogger
+
+LD_DLIBS=$(DLIBS_INCLUDE) $(DLIBS)
+LDFLAGS=-shared -o
 
 LIBNAME=controller.so
 
@@ -14,10 +20,10 @@ LIBNAME=controller.so
 .build: $(LIBNAME)
 
 $(LIBNAME): $(OBJECTS)
-	$(CXX) $(LDFLAGS) $@ $^ $(DLIBS_INCLUDE) $(DLIBS)
+	$(CXX) $(LDFLAGS) $@ $^ $(LD_DLIBS)
 
 Controller.o: Controller.cpp
-	$(CXX) $(CXXFLAGS) $(INCLUDE) $^
+	$(CXX) $(DLIBFLAGS) $^
 
 clean:
 	rm $(OBJECTS) $(LIBNAME)
