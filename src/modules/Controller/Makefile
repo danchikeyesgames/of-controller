@@ -1,4 +1,4 @@
-SOURCES=Controller.cpp
+SOURCES=Controller.cpp Server/OfServer.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
 
 CXX ?= g++
@@ -18,12 +18,17 @@ LIBNAME=controller.so
 .PHONY: .build clean
 
 .build: $(LIBNAME)
+	make -C Server/ MainProc.elf -j4
+	make -C Server/ Worker.elf -j4
 
 $(LIBNAME): $(OBJECTS)
 	$(CXX) $(LDFLAGS) $@ $^ $(LD_DLIBS)
 
 Controller.o: Controller.cpp
 	$(CXX) $(DLIBFLAGS) $^
+
+Server/OfServer.o: Server/OfServer.cpp
+	$(CXX) $(DLIBFLAGS) $^ -o $@
 
 clean:
 	rm $(OBJECTS) $(LIBNAME)
