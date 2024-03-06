@@ -86,8 +86,9 @@ int main(int argc, char* argv[]) {
     std::map<uint16_t, int> ConnectionSession;
     ConnectionSession[0] = sockfd;
     
-    int efd = epoll_create(1024);
+    int efd = epoll_create1(EPOLL_CLOEXEC);
     struct epoll_event ev, *events;
+    events = new struct epoll_event[1024];
 
     ev.events = EPOLLIN | EPOLLET;
     ev.data.fd = ConnectionSession[0];
@@ -102,21 +103,42 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < nfds; ++i) {
             if (events[i].data.fd == ConnectionSession[0]) {
                 int numberBytes = recv(ConnectionSession[0], buffer, 4096, 0);
+                Log::Instance().Print(eLogLevel::eInfo, "recv: '%s'", buffer);
 
                 int newSessionFd = atoi(buffer);
+                Log::Instance().Print(eLogLevel::eInfo, "[%u] fd:'%d'", id, newSessionFd);
                 memset(buffer, 0, sizeof(buffer));
                 ev.events = EPOLLIN | EPOLLET;
                 ev.data.fd = newSessionFd;
+
+                numberBytes = recv(newSessionFd, buffer, 4096, 0);
+                if (numberBytes < 0) {
+                    perror("recv:");
+                }
+                Log::Instance().Print(eLogLevel::eInfo, "recv: '%s'", buffer);
+
                 if (epoll_ctl(efd, EPOLL_CTL_ADD, newSessionFd, &ev) < 0) {
                     Log::Instance().Print(eLogLevel::eError, "[%u] client: epoll_ctl", id);
+                    if (errno == EBADF) {
+                        Log::Instance().Print(eLogLevel::eError, "EBADF");
+                    }
+                    if (errno == EPERM) {
+                        Log::Instance().Print(eLogLevel::eError, "EPERM");
+                    }
+                    if (errno == EINVAL) {
+                        Log::Instance().Print(eLogLevel::eError, "EINVAL");
+                    }
+                    if (errno == ENOMEM) {
+                        Log::Instance().Print(eLogLevel::eError, "ENOMEM");
+                    }
                     exit(EXIT_FAILURE);
                 }
                 Log::Instance().Print(eLogLevel::eInfo, "[%u] New Session '%u': '%d'", id, s_id, newSessionFd);
                 ConnectionSession[s_id] = newSessionFd;
                 ++s_id;
             }
-        else
-            Log::Instance().Print(eLogLevel::eInfo, "Proc Switch");
+            else
+                Log::Instance().Print(eLogLevel::eInfo, "Proc Switch");
         }
     }
 

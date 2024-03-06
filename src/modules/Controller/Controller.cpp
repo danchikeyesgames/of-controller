@@ -16,7 +16,7 @@ void Controller::Start() {
     Log::Instance().Print(eLogLevel::eInfo, "Module Controller Start");
     Log::Instance().Print(eLogLevel::eInfo, "Module Controller: Start OFServer");
 
-    OfServer ofServer(6600, 2, "0.0.0.0");
+    OfServer ofServer(6633, 2, "0.0.0.0");
     ofServer.StartServer();
 
     Log::Instance().Print(eLogLevel::eInfo, "Module Controller: AsyncEvent");

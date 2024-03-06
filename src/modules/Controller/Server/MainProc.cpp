@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
             return 1;
         } else if (pid > 0) {
             int newfd = accept(socketServerfd, NULL, 0);
-            socketClient.push_back(newfd);
+            socketClient[i] = newfd;
             Log::Instance().Print(eLogLevel::eDebug, "MainProc: ACCEPT");
         } else {
             Log::Instance().Print(eLogLevel::eDebug, "I am child %d of %d", getpid(), getppid());
@@ -102,11 +102,17 @@ int main(int argc, char* argv[]) {
     char buffer[4096] = {0};
 
     while (true) {
-        int OutFd = accept(socketServerfd, NULL, 0);
+        int OutFd = accept4(socketServerfd, NULL, 0, SOCK_CLOEXEC);
         snprintf(buffer, 4096, "%d", OutFd);       
 
-        send(socketClient[count], buffer, 4096, 0);
+        Log::Instance().Print(eLogLevel::eDebug, "%s", buffer);
+        long sz = send(socketClient[count], buffer, 4096, 0);
+        if (sz < 0) {
+            perror("send");
+        }
+        Log::Instance().Print(eLogLevel::eDebug, "sz: %li", sz);
         memset(buffer, 0, sizeof(buffer));
+        count = (count + 1) % threads;
     }
 
     return 0;
