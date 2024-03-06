@@ -31,4 +31,4 @@ Server/OfServer.o: Server/OfServer.cpp
 	$(CXX) $(DLIBFLAGS) $^ -o $@
 
 clean:
-	rm $(OBJECTS) $(LIBNAME)
+	rm $(OBJECTS) $(LIBNAME) Server/MainProc.elf Server/Worker.elf

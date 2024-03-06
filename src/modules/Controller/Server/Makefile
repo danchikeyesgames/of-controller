@@ -5,9 +5,9 @@ CXX ?= g++
 CXXFLAGS ?= -c
 INCLUDE ?= -I../../../core/
 
-CXXFLAGS:=$(INCLUDE) $(CXXFLAGS)
+CXXFLAGS:=$(INCLUDE)
 
-DLIBS_INCLUDE=-L../../core/common/log
+DLIBS_INCLUDE=-L../../../core/common/log
 DLIBS=-llogger
 
 LD_DLIBS=$(DLIBS_INCLUDE) $(DLIBS)

@@ -9,15 +9,19 @@ Controller::Controller() : ModuleBase("controller") {
 }
 
 void Controller::Init() {
-    printf("hello mans\n");
     Log::Instance().Print(eLogLevel::eInfo, "Module Controller Init");
 }
 
 void Controller::Start() {
     Log::Instance().Print(eLogLevel::eInfo, "Module Controller Start");
+    Log::Instance().Print(eLogLevel::eInfo, "Module Controller: Start OFServer");
 
     OfServer ofServer(6600, 2, "0.0.0.0");
     ofServer.StartServer();
+
+    Log::Instance().Print(eLogLevel::eInfo, "Module Controller: AsyncEvent");
+    ofServer.AsyncEvent();
+
 }
 
 void Controller::Shutdown() {
