@@ -1,4 +1,4 @@
-SOURCES=Controller.cpp Server/OfServer.cpp
+SOURCES=Controller.cpp Server/OfServer.cpp Server/Message.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
 
 CXX ?= g++
@@ -28,6 +28,9 @@ Controller.o: Controller.cpp
 	$(CXX) $(DLIBFLAGS) $^
 
 Server/OfServer.o: Server/OfServer.cpp
+	$(CXX) $(DLIBFLAGS) $^ -o $@
+
+Server/Message.o: Server/Message.cpp
 	$(CXX) $(DLIBFLAGS) $^ -o $@
 
 clean:

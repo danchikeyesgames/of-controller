@@ -2,8 +2,11 @@
 
 #include "common/log/logger.hpp"
 
-#include <cstring>
+#include "Message.hpp"
+
 #include <string>
+
+#include <cstring>
 
 #include <unistd.h>
 #include <sys/wait.h>
@@ -166,7 +169,8 @@ void OfServer::AsyncEvent() {
             Log::Instance().Print(eLogLevel::eInfo, "recv messages %u", events[i].events);
             if (events[i].events == EPOLLIN) {
                 Log::Instance().Print(eLogLevel::eInfo, "EPOLLIN");
-                int numberBytes = recv(events[i].data.fd, buffer, 4096, 0);
+                Message msg;
+                int numberBytes = recv(events[i].data.fd, (void *) &msg, sizeof(msg), 0);
                 
                 if (m_idMap.find(events[i].data.fd) == m_idMap.end()) {
                     Log::Instance().Print(eLogLevel::eInfo, "unregistered id and fd");
@@ -174,7 +178,10 @@ void OfServer::AsyncEvent() {
                 }
 
                 uint16_t tmpId = m_idMap[events[i].data.fd];
-                Log::Instance().Print(eLogLevel::eInfo, "[%u] %s", tmpId, buffer);
+                Log::Instance().Print(eLogLevel::eInfo, "[%u]", tmpId);
+
+
+                Log::Instance().Print(eLogLevel::eInfo, "[%u:%u]", msg.GetWorker(), msg.GetSession());
             }
             if (events[i].events == EPOLLOUT) {
                 Log::Instance().Print(eLogLevel::eInfo, "EPOLLOUT");

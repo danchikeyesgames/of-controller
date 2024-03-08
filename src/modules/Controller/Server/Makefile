@@ -16,8 +16,8 @@ LDFLAGS=-c
 EXECMAINPROC=MainProc.elf
 EXECWORKER=Worker.elf
 
-$(EXECMAINPROC): MainProc.cpp
+$(EXECMAINPROC): MainProc.cpp Message.cpp
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LD_DLIBS)
 
-$(EXECWORKER): Worker.cpp
+$(EXECWORKER): Worker.cpp Message.cpp
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LD_DLIBS)

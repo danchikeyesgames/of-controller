@@ -7,10 +7,17 @@
 #include <sys/types.h>
 #include <netdb.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 
 #include "common/log/logger.hpp"
 
 #define PATH_WORKER "/home/danchik/Desktop/rep/of-controller/src/modules/Controller/Server/Worker.elf"
+#define ADDRESS "mysocket"
+
+#define CONTROLLEN CMSG_LEN(sizeof(int))
+static struct cmsghdr *cmptr = NULL; /* размещается при первом вызове */
+
+static int send_fd(int fd, int fd_to_send);
 
 int main(int argc, char* argv[]) {
     std::string programName;
@@ -42,9 +49,62 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    // UNIX sockets
+    std::vector<int> socketClient(threads);
+    int i, d, len, ca_len;
+	struct sockaddr_un sa, ca;
+
+
+
+    if ((d = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+        perror("server: socket");
+        Log::Instance().Print(eLogLevel::eError, "unix server: socket");
+        exit(EXIT_FAILURE);
+    }
+
+    sa.sun_family = AF_UNIX;
+	strcpy(sa.sun_path, ADDRESS);
+
+    unlink(ADDRESS);
+    len = sizeof (sa.sun_family) + strlen (sa.sun_path);
+
+    if (bind(d, (const sockaddr *) &sa, len) == -1) {
+        close(d);
+        Log::Instance().Print(eLogLevel::eError, "unix server: bind");
+        exit(EXIT_FAILURE);
+    }
+
+    if (listen(d, 10) == -1) {
+        close(d);
+        Log::Instance().Print(eLogLevel::eError, "unix server: listen");
+        exit(EXIT_FAILURE);
+    }
+
+    for (int i = 0; i < threads; ++i) {
+        pid_t pid = fork();
+
+        if (pid == -1) {
+            Log::Instance().Print(eLogLevel::eError, "failed call fork()");
+            return 1;
+        } else if (pid > 0) {
+            int newfd = accept(d, NULL, 0);
+            socketClient[i] = newfd;
+            Log::Instance().Print(eLogLevel::eDebug, "MainProc: ACCEPT");
+        } else {
+            Log::Instance().Print(eLogLevel::eDebug, "I am child %d of %d", getpid(), getppid());
+            char tmpBuffer[4096] = {0};
+            snprintf(tmpBuffer, 4096, "%d", i);
+            if (execl(PATH_WORKER, PATH_WORKER, portLocalNet.c_str(), tmpBuffer, NULL) == -1) {
+                Log::Instance().Print(eLogLevel::eError, "failed execl()");
+                return 1;
+            }
+        }
+    }
+
+    // INET sockets
+
     int socketServerfd;
     struct addrinfo hints, *servinfo;
-    std::vector<int> socketClient(threads);
     int ret;
 
     memset(&hints, 0, sizeof(struct addrinfo));
@@ -75,27 +135,6 @@ int main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    for (int i = 0; i < threads; ++i) {
-        pid_t pid = fork();
-
-        if (pid == -1) {
-            Log::Instance().Print(eLogLevel::eError, "failed call fork()");
-            return 1;
-        } else if (pid > 0) {
-            int newfd = accept(socketServerfd, NULL, 0);
-            socketClient[i] = newfd;
-            Log::Instance().Print(eLogLevel::eDebug, "MainProc: ACCEPT");
-        } else {
-            Log::Instance().Print(eLogLevel::eDebug, "I am child %d of %d", getpid(), getppid());
-            char tmpBuffer[4096] = {0};
-            snprintf(tmpBuffer, 4096, "%d", i);
-            if (execl(PATH_WORKER, PATH_WORKER, portLocalNet.c_str(), tmpBuffer, NULL) == -1) {
-                Log::Instance().Print(eLogLevel::eError, "failed execl()");
-                return 1;
-            }
-        }
-    }
-
     Log::Instance().Print(eLogLevel::eDebug, "MainProc: OK");
 
     int count = 0;
@@ -106,7 +145,7 @@ int main(int argc, char* argv[]) {
         snprintf(buffer, 4096, "%d", OutFd);       
 
         Log::Instance().Print(eLogLevel::eDebug, "%s", buffer);
-        long sz = send(socketClient[count], buffer, 4096, 0);
+        long sz = send_fd(socketClient[count], OutFd);
         if (sz < 0) {
             perror("send");
         }
@@ -116,4 +155,40 @@ int main(int argc, char* argv[]) {
     }
 
     return 0;
+}
+
+static int send_fd(int fd, int fd_to_send) {
+    struct iovec iov[1];
+    struct msghdr msg;
+    char buf[2]; /* 2-байтный протокол send_fd()/recv_fd() */
+
+    iov[0].iov_base = buf;
+    iov[0].iov_len = 2;
+    msg.msg_iov = iov;
+    msg.msg_iovlen = 1;
+    msg.msg_name = NULL;
+    msg.msg_namelen = 0;
+
+    if (fd_to_send < 0) {
+        msg.msg_control = NULL;
+        msg.msg_controllen = 0;
+        buf[1] = -fd_to_send; /* ненулевое значение означает ошибку */
+        if (buf[1] == 0)
+        buf[1] = 1; /* протокол преобразует в -256 */
+    } else {
+        if (cmptr == NULL && (cmptr = (cmsghdr *) malloc(CONTROLLEN)) == NULL)
+            return(-1);
+        cmptr->cmsg_level = SOL_SOCKET;
+        cmptr->cmsg_type = SCM_RIGHTS;
+        cmptr->cmsg_len = CONTROLLEN;
+        msg.msg_control = cmptr;
+        msg.msg_controllen = CONTROLLEN;
+        *(int *)CMSG_DATA(cmptr) = fd_to_send; /* записать дескриптор */
+        buf[1] = 0; /* нулевое значение означает отсутствие ошибки */
+    }
+
+    buf[0] = 0; /* нулевой байт – флаг для recv_fd() */
+    if (sendmsg(fd, &msg, 0) != 2)
+        return(-1);
+    return(0);
 }

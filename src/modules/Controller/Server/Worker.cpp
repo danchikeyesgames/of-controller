@@ -1,3 +1,5 @@
+#include "Message.hpp"
+
 #include <cstring>
 #include <string>
 #include <map>
@@ -8,8 +10,16 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <sys/epoll.h>
+#include <sys/un.h>
 
 #include "common/log/logger.hpp"
+
+#define ADDRESS "mysocket"
+
+#define CONTROLLEN CMSG_LEN(sizeof(int))
+static struct cmsghdr *cmptr = NULL; /* размещается при первом вызове */
+
+static int recv_fd(int fd);
 
 int main(int argc, char* argv[]) {
 
@@ -50,29 +60,22 @@ int main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    char HelloMsg[] = "Hello World";
-    int sz = send(sockServFd, HelloMsg, sizeof(HelloMsg), 0);
-    Log::Instance().Print(eLogLevel::eInfo, "[%u] sz:%d", id, sz);
-
     // Connect MainProc
 
-    memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
+    struct sockaddr_un sa;
 
-    if ((ret = getaddrinfo("0.0.0.0", port.c_str(), &hints, &servinfo)) != 0) {
-        Log::Instance().Print(eLogLevel::eError, "%s", gai_strerror(ret));
-        exit(EXIT_FAILURE);
-    }
-
-    if ((sockfd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol)) == -1) {
+    if ((sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
         perror("client: socket");
         Log::Instance().Print(eLogLevel::eError, "[%u] client: socket", id);
         exit(EXIT_FAILURE);
     }
 
+    sa.sun_family = AF_UNIX;
+	strcpy(sa.sun_path, ADDRESS);
+    size_t len = sizeof ( sa.sun_family) + strlen ( sa.sun_path);
+
     Log::Instance().Print(eLogLevel::eDebug, "[%u] Worker: CONNECT...", id);
-    if (connect(sockfd, servinfo->ai_addr, servinfo->ai_addrlen) == -1) {
+    if (connect(sockfd, (const sockaddr *) &sa, len) == -1) {
         close(sockfd);
         perror("client: connect");
         Log::Instance().Print(eLogLevel::eError, "[%u] client: connect", id);
@@ -84,17 +87,24 @@ int main(int argc, char* argv[]) {
     uint16_t s_id = 2;
     char buffer[4096] = {0};
     std::map<uint16_t, int> ConnectionSession;
+    std::map<int, uint16_t> TransformFdtoId;
     ConnectionSession[0] = sockfd;
-    
+    ConnectionSession[1] = sockServFd;
+
+    TransformFdtoId[sockfd] = ConnectionSession[0];
+    TransformFdtoId[sockServFd] = ConnectionSession[1];
+
     int efd = epoll_create1(EPOLL_CLOEXEC);
     struct epoll_event ev, *events;
     events = new struct epoll_event[1024];
 
-    ev.events = EPOLLIN | EPOLLET;
-    ev.data.fd = ConnectionSession[0];
-    if (epoll_ctl(efd, EPOLL_CTL_ADD, ConnectionSession[0], &ev) < 0) {
-        Log::Instance().Print(eLogLevel::eError, "[%u] client: epoll_ctl", id);
-        exit(EXIT_FAILURE);
+    for (int i = 0; i < ConnectionSession.size(); ++i) {
+        ev.events = EPOLLIN | EPOLLET;
+        ev.data.fd = ConnectionSession[i];
+        if (epoll_ctl(efd, EPOLL_CTL_ADD, ConnectionSession[i], &ev) < 0) {
+            Log::Instance().Print(eLogLevel::eError, "[%u] client: epoll_ctl", id);
+            exit(EXIT_FAILURE);
+        }
     }
 
     while (true) {
@@ -102,20 +112,11 @@ int main(int argc, char* argv[]) {
 
         for (int i = 0; i < nfds; ++i) {
             if (events[i].data.fd == ConnectionSession[0]) {
-                int numberBytes = recv(ConnectionSession[0], buffer, 4096, 0);
-                Log::Instance().Print(eLogLevel::eInfo, "recv: '%s'", buffer);
+                int newSessionFd = recv_fd(ConnectionSession[0]);
+                Log::Instance().Print(eLogLevel::eInfo, "recv: '%d'", newSessionFd);
 
-                int newSessionFd = atoi(buffer);
-                Log::Instance().Print(eLogLevel::eInfo, "[%u] fd:'%d'", id, newSessionFd);
-                memset(buffer, 0, sizeof(buffer));
                 ev.events = EPOLLIN | EPOLLET;
                 ev.data.fd = newSessionFd;
-
-                numberBytes = recv(newSessionFd, buffer, 4096, 0);
-                if (numberBytes < 0) {
-                    perror("recv:");
-                }
-                Log::Instance().Print(eLogLevel::eInfo, "recv: '%s'", buffer);
 
                 if (epoll_ctl(efd, EPOLL_CTL_ADD, newSessionFd, &ev) < 0) {
                     Log::Instance().Print(eLogLevel::eError, "[%u] client: epoll_ctl", id);
@@ -135,12 +136,81 @@ int main(int argc, char* argv[]) {
                 }
                 Log::Instance().Print(eLogLevel::eInfo, "[%u] New Session '%u': '%d'", id, s_id, newSessionFd);
                 ConnectionSession[s_id] = newSessionFd;
+                TransformFdtoId[newSessionFd] = s_id;
                 ++s_id;
+            } else {
+                Log::Instance().Print(eLogLevel::eInfo, "[%u] Proc Switch", id);
+                recv(events[i].data.fd, buffer, 4096, 0);
+                Log::Instance().Print(eLogLevel::eInfo, "[%u] recv: '%s'", id, buffer);
+                
+                uint16_t tmpId = TransformFdtoId[events[i].data.fd];
+                Message msg(id, tmpId, buffer);
+
+                send(ConnectionSession[1], (void *) &msg, sizeof(msg), 0);
+
+                memset(buffer, 0, sizeof(buffer));
             }
-            else
-                Log::Instance().Print(eLogLevel::eInfo, "Proc Switch");
         }
     }
 
     return 0;
+}
+
+static int recv_fd(int fd) {
+    int newfd, nr, status;
+    char *ptr;
+    char buf[2];
+    struct iovec iov[1];
+    struct msghdr msg;
+    status = -1;
+
+    for ( ; ; ) {
+        iov[0].iov_base = buf;
+        iov[0].iov_len = sizeof(buf);
+        msg.msg_iov = iov;
+        msg.msg_iovlen = 1;
+        msg.msg_name = NULL;
+        msg.msg_namelen = 0;
+
+        if (cmptr == NULL && (cmptr = (cmsghdr *) malloc(CONTROLLEN)) == NULL)
+            return(-1);
+        msg.msg_control = cmptr;
+        msg.msg_controllen = CONTROLLEN;
+
+        if ((nr = recvmsg(fd, &msg, 0)) < 0) {
+            printf("ошибка вызова функции recvmsg");
+        } else if (nr == 0) {
+            printf("соединение закрыто сервером");
+            return(-1);
+        }
+
+        /*
+        * Проверить, являются ли два последних байта нулевым байтом
+        * и кодом ошибки. Нулевой байт должен быть предпоследним,
+        * а код ошибки - последним байтом в буфере.
+        * Нулевой код ошибки означает, что мы должны принять дескриптор.
+        */
+        for (ptr = buf; ptr < &buf[nr]; ) {
+            if (*ptr++ == 0) {
+                if (ptr != &buf[nr-1])
+                    printf("нарушение формата сообщения");
+
+                status = *ptr & 0xFF; /* предотвратить расширение знакового бита */
+                if (status == 0) {
+                    if (msg.msg_controllen != CONTROLLEN)
+                        printf("получен код 0, но отсутствует fd");
+                    newfd = *(int *)CMSG_DATA(cmptr);
+                } else {
+                    newfd = -status;
+                }
+                nr -= 2;
+            }
+        }
+
+        if (nr > 0)
+            return(-1);
+
+        if (status >= 0) /* доставлены заключительные данные */
+            return(newfd); /* дескриптор или код ошибки */
+    }
 }

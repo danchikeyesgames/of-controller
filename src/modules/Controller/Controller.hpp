@@ -4,6 +4,8 @@
 #include "api/Module.hpp"
 
 class Controller : ModuleBase {
+    struct ControllerImpl;
+    ControllerImpl* m_controllerImpl;
 public:
     void Init() override;
     void Start() override;
