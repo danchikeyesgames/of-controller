@@ -14,6 +14,8 @@
 
 #include "common/log/logger.hpp"
 
+#include "../OFMessage.hpp"
+
 #define ADDRESS "mysocket"
 
 #define CONTROLLEN CMSG_LEN(sizeof(int))
@@ -85,7 +87,7 @@ int main(int argc, char* argv[]) {
     Log::Instance().Print(eLogLevel::eInfo, "[%u] Worker: OK", id);
 
     uint16_t s_id = 2;
-    char buffer[4096] = {0};
+    void* buffer = new char[4096];
     std::map<uint16_t, int> ConnectionSession;
     std::map<int, uint16_t> TransformFdtoId;
     ConnectionSession[0] = sockfd;
@@ -138,15 +140,26 @@ int main(int argc, char* argv[]) {
                 ConnectionSession[s_id] = newSessionFd;
                 TransformFdtoId[newSessionFd] = s_id;
                 ++s_id;
+            } else if (events[i].data.fd == ConnectionSession[1]) {
+                Message msg("he");
+                recv(events[i].data.fd, &msg, sizeof(msg), 0);
+                recv(events[i].data.fd, buffer, sizeof(struct ofp_header), 0);
+
+                int fd_tmp = ConnectionSession[msg.GetSession()];
+                Log::Instance().Print(eLogLevel::eInfo, "[%u] send to switch '%u': '%d'", id, msg.GetSession(), fd_tmp);
+                
+                send(fd_tmp, buffer, sizeof(struct ofp_header), 0);
             } else {
                 Log::Instance().Print(eLogLevel::eInfo, "[%u] Proc Switch", id);
-                recv(events[i].data.fd, buffer, 4096, 0);
-                Log::Instance().Print(eLogLevel::eInfo, "[%u] recv: '%s'", id, buffer);
+                recv(events[i].data.fd, buffer, sizeof(struct ofp_header), 0);
                 
                 uint16_t tmpId = TransformFdtoId[events[i].data.fd];
-                Message msg(id, tmpId, buffer);
+                Message msg(id, tmpId, sizeof(struct ofp_header));
+
+                Log::Instance().Print(eLogLevel::eDebug, "type %d", ((ofp_header *) buffer)->type);
 
                 send(ConnectionSession[1], (void *) &msg, sizeof(msg), 0);
+                send(ConnectionSession[1], (void *) buffer, sizeof(struct ofp_header), 0);
 
                 memset(buffer, 0, sizeof(buffer));
             }

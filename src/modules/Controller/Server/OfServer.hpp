@@ -5,6 +5,8 @@
 #include <vector>
 #include <map>
 
+#include "../Dispatcher.hpp"
+
 class OfServer {
     uint16_t m_port;
     uint16_t m_nthreads;
@@ -15,7 +17,7 @@ class OfServer {
 public:
     OfServer(uint16_t _port, uint16_t _nthreads, std::string _ipv4);
     void StartServer();
-    void AsyncEvent();
+    void AsyncEvent(Dispatcher& _dispatcher);
 };
 
 

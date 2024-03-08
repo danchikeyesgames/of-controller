@@ -1,4 +1,4 @@
-SOURCES=Controller.cpp Server/OfServer.cpp Server/Message.cpp
+SOURCES=Controller.cpp Server/OfServer.cpp Server/Message.cpp Dispatcher.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
 
 CXX ?= g++
@@ -32,6 +32,9 @@ Server/OfServer.o: Server/OfServer.cpp
 
 Server/Message.o: Server/Message.cpp
 	$(CXX) $(DLIBFLAGS) $^ -o $@
+
+Dispatcher.o: Dispatcher.cpp
+	$(CXX) $(DLIBFLAGS) $^
 
 clean:
 	rm $(OBJECTS) $(LIBNAME) Server/MainProc.elf Server/Worker.elf

@@ -3,12 +3,14 @@
 #include "common/log/logger.hpp"
 
 #include "Server/OfServer.hpp"
+#include "Dispatcher.hpp"
 
 #include <new>
 
 struct Controller::ControllerImpl {
     OfServer* m_ofServer;
     ModuleBase* m_parentModule;
+    Dispatcher m_dispatcher;
 
     ControllerImpl(ModuleBase* _module);
     void Run();
@@ -69,11 +71,14 @@ OfServer* Controller::ControllerImpl::CreateOfServer(const std::string& _ipAddr,
 }
 
 void Controller::ControllerImpl::Run() {
+    Log::Instance().Print(eLogLevel::eInfo, "Dispatcher Start");
+    m_dispatcher.Start();
+
     Log::Instance().Print(eLogLevel::eInfo, "Module Controller: Start OFServer");
     m_ofServer->StartServer();
 
     Log::Instance().Print(eLogLevel::eInfo, "Module Controller: AsyncEvent");
-    m_ofServer->AsyncEvent();
+    m_ofServer->AsyncEvent(m_dispatcher);
 }
 
 

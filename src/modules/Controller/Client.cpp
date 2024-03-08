@@ -9,6 +9,8 @@
 #include <sys/socket.h>
 #include <sys/epoll.h>
 
+#include "OFMessage.hpp"
+
 int main() {
     int sockfd, sockServFd;
     struct addrinfo hints, *servinfo2, *servinfo;
@@ -39,9 +41,23 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    char HelloMsg[] = "Hello World";
-    int sz = send(sockServFd, HelloMsg, sizeof(HelloMsg), 0);
-    printf("[+] sz: %d\n", sz);
+    ofp_header* hder = new ofp_header;
+    hder->type = OFPT_HELLO;
+    int sz = send(sockServFd, (void* ) hder, sizeof(hder), 0);
+
+    void* mmm = malloc(sizeof(ofp_header));
+    recv(sockServFd, mmm, sizeof(ofp_header), 0);
+    
+    printf("[+] i recv message\n");
+
+    ofp_header* echo = new ofp_header;
+    echo->type = OFPT_ECHO_REQUEST;
+    sz = send(sockServFd, echo, sizeof(echo), 0);
+
+    void* mmm1 = malloc(sizeof(ofp_header));
+    recv(sockServFd, mmm1, sizeof(ofp_header), 0);
+
+    printf("[+] i recv message\n");
 
     char buffer[4096] = {0};
     while (true) {

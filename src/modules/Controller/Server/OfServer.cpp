@@ -3,6 +3,8 @@
 #include "common/log/logger.hpp"
 
 #include "Message.hpp"
+#include "../OFMessage.hpp"
+#include "../Dispatcher.hpp"
 
 #include <string>
 
@@ -108,7 +110,7 @@ void OfServer::StartServer() {
     }
 }
 
-void OfServer::AsyncEvent() {
+void OfServer::AsyncEvent(Dispatcher& _dispatcher) {
     int efd = epoll_create(1024);
     if (efd < 0) {
         Log::Instance().Print(eLogLevel::eError, "epoll_create");
@@ -170,12 +172,32 @@ void OfServer::AsyncEvent() {
             if (events[i].events == EPOLLIN) {
                 Log::Instance().Print(eLogLevel::eInfo, "EPOLLIN");
                 Message msg;
+                void* buf_ = malloc(sizeof(struct ofp_header));
                 int numberBytes = recv(events[i].data.fd, (void *) &msg, sizeof(msg), 0);
-                
+                numberBytes = recv(events[i].data.fd, (void *) buf_, sizeof(struct ofp_header), 0);
+
+                Log::Instance().Print(eLogLevel::eDebug, "msg sz recv: [%d]", numberBytes);
+
                 if (m_idMap.find(events[i].data.fd) == m_idMap.end()) {
                     Log::Instance().Print(eLogLevel::eInfo, "unregistered id and fd");
                     exit(EXIT_FAILURE);
                 }
+
+                ofp_header* header = (ofp_header *)buf_;
+
+                Log::Instance().Print(eLogLevel::eDebug, "msg: [%u] [%u]", header->type, header->type);
+
+                if (header->type == OFPT_HELLO) {
+                    Log::Instance().Print(eLogLevel::eDebug, "msg: Hello");
+                } else if (header->type == OFPT_ECHO_REQUEST) {
+                    Log::Instance().Print(eLogLevel::eDebug, "msg: echo");
+                    header->type = OFPT_ECHO_REPLY;
+                }
+
+                msg.SetSession(m_sessions);
+
+                Command* handler = new EchoCommandHandler(msg, buf_);
+                _dispatcher.AddCommand(handler);
 
                 uint16_t tmpId = m_idMap[events[i].data.fd];
                 Log::Instance().Print(eLogLevel::eInfo, "[%u]", tmpId);
